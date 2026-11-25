@@ -82,7 +82,7 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
             double lateral = -gamepad1.left_stick_x;
             double yaw = gamepad1.right_stick_x;
 
-            boolean autoDrivingBack = gamepad1.right_trigger > 0.1;
+            boolean autoDrivingBack = gamepad2.right_trigger > 0.1;
             if (autoDrivingBack) {
                 navigator.calculateDriveToBack();
                 axial = navigator.driveAxial;
@@ -121,7 +121,7 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
             telemetry.addData("IMU Pitch / Roll", "%.1f° / %.1f°", navigator.getImuPitch(), navigator.getImuRoll());
 
             flywheels.update(
-                gamepad1.left_bumper, gamepad1.right_bumper, gamepad1.dpad_down, gamepad1.left_trigger,
+                gamepad1.left_bumper, gamepad1.dpad_down, gamepad1.left_trigger, gamepad1.right_trigger,
                 gamepad2.dpad_up, gamepad2.dpad_down, gamepad2.y, gamepad2.a, gamepad2.b
             );
 
@@ -157,8 +157,9 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
 
             telemetry.addData("Status", "Run Time: " + runtime.toString());
             
-            telemetry.addData("Nectar Flywheel (LB)", flywheels.getNectarFlywheelStatus());
-            telemetry.addData("Pollen Flywheel (RB)", flywheels.getPollenFlywheelStatus());
+            telemetry.addData("Intake (LB)", flywheels.isIntakeEnabled() ? "ON" : "OFF");
+            telemetry.addData("Nectar Flywheel (LT)", flywheels.getNectarFlywheelStatus());
+            telemetry.addData("Pollen Flywheel (RT)", flywheels.getPollenFlywheelStatus());
             
             telemetry.addData("Stopper 1 (Nectar)", stoppers.getNectarState());
             telemetry.addData("Stopper 2 (Pollen)", stoppers.getPollenState());

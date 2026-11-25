@@ -8,8 +8,8 @@ import com.qualcomm.robotcore.util.Range;
 
 public class FlywheelController {
 
-    private DcMotorEx flywheelNectar = null; // bottom flywheel
-    private DcMotorEx flywheelPollen = null; // top flywheel
+    private DcMotorEx flywheelNectar = null;
+    private DcMotorEx flywheelPollen = null;
     private DcMotor intakeMotor = null;
 
     // RPM Calculation Trackers
@@ -28,19 +28,22 @@ public class FlywheelController {
     private final double RPM_STEP = 50.0; 
 
     // Gamepad button state tracking
-    private boolean previousLB = false;
-    private boolean previousRB = false;
+    private boolean previousIntakeBumper = false;
+    private boolean previousNectarTrigger = false;
+    private boolean previousPollenTrigger = false;
     private boolean prevGp2DpadUp = false;
     private boolean prevGp2DpadDown = false;
     private boolean prevGp2Y = false;
     private boolean prevGp2A = false;
     private boolean prevGp2B = false;
 
+    private boolean intakeEnabled = false;
     private boolean nectarEnabled = false;
     private boolean pollenEnabled = false;
 
     // Proportional gain for software loop
     private static final double Kp = 0.0003; 
+    private static final double TRIGGER_PRESS_THRESHOLD = 0.5;
 
     public void init(HardwareMap hardwareMap) {
         flywheelNectar = hardwareMap.get(DcMotorEx.class, "flywheel_1");
@@ -63,6 +66,7 @@ public class FlywheelController {
 
         nectarEnabled = false;
         pollenEnabled = false;
+        intakeEnabled = false;
         nectarTargetRpm = 2500.0;
         pollenTargetRpm = 2500.0;
 
@@ -74,7 +78,7 @@ public class FlywheelController {
     }
 
     public void update(
-        boolean gp1LB, boolean gp1RB, boolean gp1DpadDown, float gp1LeftTrigger,
+        boolean gp1LeftBumper, boolean gp1DpadDown, float gp1LeftTrigger, float gp1RightTrigger,
         boolean gp2DpadUp, boolean gp2DpadDown, boolean gp2Y, boolean gp2A, boolean gp2B
     ) {
         double seconds = velTimer.seconds();
@@ -94,11 +98,16 @@ public class FlywheelController {
             velTimer.reset();
         }
 
-        if (gp1LB && !previousLB) { nectarEnabled = !nectarEnabled; }
-        previousLB = gp1LB;
+        if (gp1LeftBumper && !previousIntakeBumper) { intakeEnabled = !intakeEnabled; }
+        previousIntakeBumper = gp1LeftBumper;
 
-        if (gp1RB && !previousRB) { pollenEnabled = !pollenEnabled; }
-        previousRB = gp1RB;
+        boolean nectarTriggerPressed = gp1LeftTrigger >= TRIGGER_PRESS_THRESHOLD;
+        if (nectarTriggerPressed && !previousNectarTrigger) { nectarEnabled = !nectarEnabled; }
+        previousNectarTrigger = nectarTriggerPressed;
+
+        boolean pollenTriggerPressed = gp1RightTrigger >= TRIGGER_PRESS_THRESHOLD;
+        if (pollenTriggerPressed && !previousPollenTrigger) { pollenEnabled = !pollenEnabled; }
+        previousPollenTrigger = pollenTriggerPressed;
 
         if (gp2DpadUp && !prevGp2DpadUp) { nectarTargetRpm = Range.clip(nectarTargetRpm + RPM_STEP, 0.0, 6000.0); }
         if (gp2DpadDown && !prevGp2DpadDown) { nectarTargetRpm = Range.clip(nectarTargetRpm - RPM_STEP, 0.0, 6000.0); }
@@ -136,7 +145,7 @@ public class FlywheelController {
         if (gp1DpadDown) {
             intakeMotor.setPower(-1.0);
         } else {
-            intakeMotor.setPower(gp1LeftTrigger);
+            intakeMotor.setPower(intakeEnabled ? 1.0 : 0.0);
         }
     }
 
@@ -146,6 +155,7 @@ public class FlywheelController {
     public double getPollenTargetRpm() { return pollenTargetRpm; }
     public boolean isNectarEnabled() { return nectarEnabled; }
     public boolean isPollenEnabled() { return pollenEnabled; }
+    public boolean isIntakeEnabled() { return intakeEnabled; }
 
     public int getOdoYEncoderTicks() { return intakeMotor.getCurrentPosition(); }
 
