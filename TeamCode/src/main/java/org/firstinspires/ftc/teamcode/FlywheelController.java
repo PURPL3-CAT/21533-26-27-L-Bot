@@ -157,7 +157,7 @@ public class FlywheelController {
     public boolean isPollenEnabled() { return pollenEnabled; }
     public boolean isIntakeEnabled() { return intakeEnabled; }
 
-    public int getOdoYEncoderTicks() { return intakeMotor.getCurrentPosition(); }
+    public int getOdoXEncoderTicks() { return intakeMotor.getCurrentPosition(); }
 
     public String getNectarFlywheelStatus() {
         return String.format("%s (%.0f / %.0f RPM)", nectarEnabled ? "ON" : "OFF", currentNectarRpm, nectarTargetRpm);

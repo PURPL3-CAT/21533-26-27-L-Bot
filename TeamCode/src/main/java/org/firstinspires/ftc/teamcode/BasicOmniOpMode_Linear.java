@@ -111,8 +111,10 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
             backLeftDrive.setPower(backLeftPower);
             backRightDrive.setPower(backRightPower);
 
-            float y_in = (float) (flywheels.getOdoYEncoderTicks() / 1303.8);
-            telemetry.addData("Odo Y", y_in);
+            float odoXIn = (float) (flywheels.getOdoXEncoderTicks() / 1303.8);
+            float odoYIn = (float) (flipoutRamp.getCurrentPosition() / 1303.8);
+            telemetry.addData("Odo X (intake)", odoXIn);
+            telemetry.addData("Odo Y (flipout)", odoYIn);
             
             telemetry.addData("Nectar Speed", "%.0f RPM", flywheels.getNectarRpm());
             telemetry.addData("Pollen Speed", "%.0f RPM", flywheels.getPollenRpm());

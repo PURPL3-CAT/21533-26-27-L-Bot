@@ -20,8 +20,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
  * HEADING (degrees, counter-clockwise positive):
  *   0 = robot front faces the right wall, 90 = top wall, 180 = left wall, 270 = bottom wall.
  *
- * ODOMETRY uses the same two pods as the TeleOp "Position X / Position Y" readout:
- *   flywheel_1 port = left-right pod, intake_motor port = forward-back pod.
+ * ODOMETRY uses the same motor encoders as the TeleOp "Odo X / Odo Y" readout:
+ *   intake_motor = left-right pod, flipout_ramp = forward-back pod.
  * Heading comes from the Control Hub IMU (hardware name "imu").
  */
 public abstract class AutoBase extends LinearOpMode {
@@ -45,8 +45,8 @@ public abstract class AutoBase extends LinearOpMode {
 
     // Pod signs. Check on the Init screen: push the robot FORWARD by hand -> "Forward pod" must go UP.
     // Push it to the RIGHT -> "Right pod" must go UP. If one goes down, change that sign to -1.0.
-    private static final double X_POD_SIGN = 1.0;   // flywheel_1 port (left-right)
-    private static final double Y_POD_SIGN = 1.0;   // intake_motor port (forward-back)
+    private static final double X_POD_SIGN = 1.0;   // intake_motor (left-right)
+    private static final double Y_POD_SIGN = 1.0;   // flipout_ramp (forward-back)
 
     // How the Control Hub is mounted on the robot (see the REV IMU orientation picture).
     private static final RevHubOrientationOnRobot.LogoFacingDirection HUB_LOGO =
@@ -80,8 +80,8 @@ public abstract class AutoBase extends LinearOpMode {
     private DcMotor backLeftDrive;
     private DcMotor frontRightDrive;
     private DcMotor backRightDrive;
-    private DcMotor xPod;   // flywheel_1 port: left-right odometry
-    private DcMotor yPod;   // intake_motor port: forward-back odometry
+    private DcMotor xPod;   // intake_motor: left-right odometry
+    private DcMotor yPod;   // flipout_ramp: forward-back odometry
     private IMU imu = null;
 
     private final ElapsedTime autoTimer = new ElapsedTime();
@@ -177,16 +177,16 @@ public abstract class AutoBase extends LinearOpMode {
         frontRightDrive = hardwareMap.get(DcMotor.class, "front_right_drive");
         backRightDrive = hardwareMap.get(DcMotor.class, "back_right_drive");
 
-        // Same names as the TeleOp: these two ports carry the odometry pod encoders.
-        xPod = hardwareMap.get(DcMotor.class, "flywheel_1");
-        yPod = hardwareMap.get(DcMotor.class, "intake_motor");
+        // Same encoders as the TeleOp: Odo X = intake, Odo Y = flipout ramp.
+        xPod = hardwareMap.get(DcMotor.class, "intake_motor");
+        yPod = hardwareMap.get(DcMotor.class, "flipout_ramp");
 
         // Same directions as the TeleOp so the pod encoder signs match what you see there.
         frontLeftDrive.setDirection(DcMotor.Direction.REVERSE);
         backLeftDrive.setDirection(DcMotor.Direction.REVERSE);
         frontRightDrive.setDirection(DcMotor.Direction.FORWARD);
         backRightDrive.setDirection(DcMotor.Direction.FORWARD);
-        xPod.setDirection(DcMotor.Direction.FORWARD);
+        xPod.setDirection(DcMotor.Direction.REVERSE);
         yPod.setDirection(DcMotor.Direction.REVERSE);
 
         DcMotor[] drive = {frontLeftDrive, backLeftDrive, frontRightDrive, backRightDrive};

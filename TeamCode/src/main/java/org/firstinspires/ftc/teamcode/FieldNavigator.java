@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
+import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -18,6 +19,16 @@ public class FieldNavigator {
 
     // --- HARDWARE ---
     private IMU imu;
+    private DcMotor odoXMotor;
+    private DcMotor odoYMotor;
+
+    private static final double TICKS_PER_INCH = 1303.8;
+    private static final double ODOMETRY_POS_CORRECTION = 0.12;
+    private int lastOdoXTicks;
+    private int lastOdoYTicks;
+    private boolean odometryInitialized = false;
+    private double odoPoseX = 0.0;
+    private double odoPoseY = 0.0;
 
     // --- OPTION A: FIELD COORDINATES (when using official game tags with robotPose) ---
     private final double TARGET_FIELD_X   = -48.0; // inches
@@ -60,6 +71,18 @@ public class FieldNavigator {
      */
     public void init(HardwareMap hardwareMap) {
         imu = hardwareMap.get(IMU.class, "imu");
+
+        odoXMotor = hardwareMap.get(DcMotor.class, "intake_motor");
+        odoYMotor = hardwareMap.get(DcMotor.class, "flipout_ramp");
+        odoXMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        odoXMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        odoYMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        odoYMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        lastOdoXTicks = odoXMotor.getCurrentPosition();
+        lastOdoYTicks = odoYMotor.getCurrentPosition();
+        odometryInitialized = true;
+        odoPoseX = 0.0;
+        odoPoseY = 0.0;
         
         // Match the working orientation profile: Upright on the left wall, ports skyward
         RevHubOrientationOnRobot.LogoFacingDirection logoDirection = RevHubOrientationOnRobot.LogoFacingDirection.LEFT;
@@ -90,6 +113,11 @@ public class FieldNavigator {
             imuRoll = imuOrientation.thirdAngle;
         }
 
+        updateOdometry();
+        posX = odoPoseX;
+        posY = odoPoseY;
+        posYaw = imuYaw;
+
         hasValidPose = false;
         usingFieldPose = false;
         detectedTagId = -1;
@@ -103,9 +131,14 @@ public class FieldNavigator {
                     // 1. Prefer full Field Pose if tag ID is in the game database
                     if (tag.robotPose != null) {
                         Pose3D pose = tag.robotPose;
-                        posX = pose.getPosition().x;
-                        posY = pose.getPosition().y;
-                        posYaw = pose.getOrientation().getYaw(AngleUnit.DEGREES);
+                        double visionX = pose.getPosition().x * 39.37007874;
+                        double visionY = pose.getPosition().y * 39.37007874;
+                        odoPoseX += (visionX - odoPoseX) * ODOMETRY_POS_CORRECTION;
+                        odoPoseY += (visionY - odoPoseY) * ODOMETRY_POS_CORRECTION;
+                        posX = odoPoseX;
+                        posY = odoPoseY;
+                        double visionYaw = pose.getOrientation().getYaw(AngleUnit.DEGREES);
+                        posYaw = normalizeAngle(imuYaw + 0.12 * normalizeAngle(visionYaw - imuYaw));
                         usingFieldPose = true;
                         hasValidPose = true;
                         break;
@@ -172,6 +205,23 @@ public class FieldNavigator {
             driveLateral = Range.clip(strafeError * kP_DRIVE, -MAX_AUTO_SPEED, MAX_AUTO_SPEED);
             driveYaw     = Range.clip(-turnError * kP_TURN, -MAX_AUTO_SPEED, MAX_AUTO_SPEED);
         }
+    }
+
+    private void updateOdometry() {
+        if (!odometryInitialized || odoXMotor == null || odoYMotor == null) {
+            return;
+        }
+
+        int odoXTicks = odoXMotor.getCurrentPosition();
+        int odoYTicks = odoYMotor.getCurrentPosition();
+        double dRight = (odoXTicks - lastOdoXTicks) / TICKS_PER_INCH;
+        double dForward = (odoYTicks - lastOdoYTicks) / TICKS_PER_INCH;
+        lastOdoXTicks = odoXTicks;
+        lastOdoYTicks = odoYTicks;
+
+        double headingRad = Math.toRadians(imuYaw);
+        odoPoseX += dForward * Math.cos(headingRad) + dRight * Math.sin(headingRad);
+        odoPoseY += dForward * Math.sin(headingRad) - dRight * Math.cos(headingRad);
     }
 
     private double normalizeAngle(double angle) {
